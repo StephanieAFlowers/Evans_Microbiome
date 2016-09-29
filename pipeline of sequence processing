@@ -1,0 +1,149 @@
+#mothur v.1.38.6
+##designates output mothur files
+
+#mothur batch file, or pipeline of sequence processing:
+make.contigs(file=Flowers.files, processors=10) 
+##Flowers.trim.contigs.fasta
+##Flowers.trim.contigs.qual
+##Flowers.contigs.report
+##Flowers.scrap.contigs.fasta
+##Flowers.contigs.groups
+
+summary.seqs (fasta=Flowers.trim.contigs.fasta, processors=10)
+##Flowers.trim.contigs.summary
+
+screen.seqs(fasta=Flowers.trim.contigs.fasta, group=Flowers.contigs.groups, maxambig=0, maxlength=275, processors=10)
+##Flowers.trim.contigs.good.fasta
+##Flowers.trim.contigs.bad.accnos
+##Flowers.contigs.good.groups
+
+unique.seqs(fasta=Flowers.trim.contigs.good.fasta)
+##Flowers.trim.contigs.good.names
+##Flowers.trim.contigs.good.unique.fasta
+
+count.seqs(names=Flowers.trim.contigs.good.names, group=Flowers.contigs.good.groups)
+##Flowers.trim.contigs.good.count_table
+
+summary.seqs(count=Flowers.trim.contigs.good.count_table)
+##Flowers.trim.contigs.good.unique.summary
+
+align.seqs(fasta=Flowers.trim.contigs.good.unique.fasta,reference=silva.v4.fasta, processors=10)
+##Flowers.trim.contigs.good.unique.align
+##Flowers.trim.contigs.good.unique.align.report
+
+summary.seqs(fasta=Flowers.trim.contigs.good.unique.align, count=Flowers.trim.contigs.good.count_table, processors=10)
+##Flowers.trim.contigs.good.unique.summary
+
+screen.seqs(fasta=Flowers.trim.contigs.good.unique.align, count=count=Flowers.trim.contigs.good.count_table, summary=Flowers.trim.contigs.good.unique.summary, start=1968, end=11550, maxhomop=8, processors=10)
+##Flowers.trim.contigs.good.unique.good.summary
+##Flowers.trim.contigs.good.unique.good.align
+##Flowers.trim.contigs.good.unique.bad.accnos
+##Flowers.trim.contigs.good.good.count_table
+
+summary.seqs(fasta=Flowers.trim.contigs.good.unique.good.align, count=Flowers.trim.contigs.good.good.count_table, processors=10
+##Flowers.trim.contigs.good.unique.good.summary
+
+filter.seqs(fasta=Flowers.trim.contigs.good.unique.good.align, verticle=T, trump=., processors=10)
+##Flowers.filter
+##Flowers.trim.contigs.good.unique.good.filter.fasta
+
+unique.seqs(fasta=Flowers.trim.contigs.good.unique.good.filter.fasta, count=Flowers.trim.contigs.good.good.count_table)
+##Flowers.trim.contigs.good.unique.good.filter.count_table
+##Flowers.trim.contigs.good.unique.good.filter.unique.fasta
+
+pre.cluster(fasta=Flowers.trim.contigs.good.unique.good.filter.unique.fasta , count=Flowers.trim.contigs.good.unique.good.filter.count_table, diffs=2, processors=10)
+##map files- 1 per sample
+##Flowers.trim.contigs.good.unique.good.filter.unique.precluster.fasta
+##Flowers.trim.contigs.good.unique.good.filter.unique.precluster.count_table
+
+chimera.uchime(fasta=Flowers.trim.contigs.good.unique.good.filter.unique.precluster.fasta , count=Flowers.trim.contigs.good.unique.good.filter.unique.precluster.count_table, dereplicate=t, processors=10)
+##Flowers.trim.contigs.good.unique.good.filter.unique.precluster.denovo.uchime.pick.count_table
+##Flowers.trim.contigs.good.unique.good.filter.unique.precluster.denovo.uchime.chimeras
+##Flowers.trim.contigs.good.unique.good.filter.unique.precluster.denovo.uchime.accnos
+
+remove.seqs(fasta=Flowers.trim.contigs.good.unique.good.filter.unique.precluster.fasta, accnos=Flowers.trim.contigs.good.unique.good.filter.unique.precluster.denovo.uchime.accnos)
+##Flowers.trim.contigs.good.unique.good.filter.unique.precluster.pick.fasta
+
+summary.seqs(fasta=Flowers.trim.contigs.good.unique.good.filter.unique.precluster.pick.fasta, count=Flowers.trim.contigs.good.unique.good.filter.unique.precluster.denovo.uchime.pick.count_table, processors=10)
+##Flowers.trim.contigs.good.unique.good.filter.unique.precluster.pick.summary
+
+classify.seqs(fasta=Flowers.trim.contigs.good.unique.good.filter.unique.precluster.pick.fasta, count=Flowers.trim.contigs.good.unique.good.filter.unique.precluster.denovo.uchime.pick.count_table, reference=trainset14_032015.rdp.fasta, taxonomy=trainset14_032015.rdp.tax, cutoff=80)
+##Flowers.trim.contigs.good.unique.good.filter.unique.precluster.pick.rdp.wang.taxonomy
+##Flowers.trim.contigs.good.unique.good.filter.unique.precluster.pick.rdp.wang.tax.summary
+
+remove.lineage(fasta=Flowers.trim.contigs.good.unique.good.filter.unique.precluster.pick.fasta, count=Flowers.trim.contigs.good.unique.good.filter.unique.precluster.denovo.uchime.pick.count_table , taxonomy=Flowers.trim.contigs.good.unique.good.filter.unique.precluster.pick.rdp.wang.taxonomy, taxon=Chloroplast-Mitochondria-unknown-Archaea-Eukaryota)
+##Flowers.trim.contigs.good.unique.good.filter.unique.precluster.pick.rdp.wang.pick.taxonomy
+##Flowers.trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.fasta
+##Flowers.trim.contigs.good.unique.good.filter.unique.precluster.denovo.uchime.pick.pick.count_table
+
+cluster.split(fasta=Flowers.trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.fasta, count=Flowers.trim.contigs.good.unique.good.filter.unique.precluster.denovo.uchime.pick.pick.count_table, taxonomy=Flowers.trim.contigs.good.unique.good.filter.unique.precluster.pick.rdp.wang.pick.taxonomy, splitmethod=classify, taxlevel=4, cutoff=0.15)
+##Flowers.trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.an.unique_list.list
+
+make.shared(list=Flowers.trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.an.unique_list.list, count=Flowers.trim.contigs.good.unique.good.filter.unique.precluster.denovo.uchime.pick.pick.count_table, label=0.03)
+##Flowers.trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.an.unique_list.shared
+
+classify.otu(list=Flowers.trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.an.unique_list.list, count=Flowers.trim.contigs.good.unique.good.filter.unique.precluster.denovo.uchime.pick.pick.count_table, taxonomy=Flowers.trim.contigs.good.unique.good.filter.unique.precluster.pick.rdp.wang.pick.taxonomy, label=0.03)
+##Flowers.trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.an.unique_list.0.03.cons.taxonomy
+##Flowers.trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.an.unique_list.0.03.cons.tax.summary
+
+phylotype(taxonomy=Flowers.trim.contigs.good.unique.good.filter.unique.precluster.pick.rdp.wang.pick.taxonomy)
+##Flowers.trim.contigs.good.unique.good.filter.unique.precluster.pick.rdp.wang.pick.tx.sabund
+##Flowers.trim.contigs.good.unique.good.filter.unique.precluster.pick.rdp.wang.pick.tx.rabund
+##Flowers.trim.contigs.good.unique.good.filter.unique.precluster.pick.rdp.wang.pick.tx.list
+
+make.shared(list=Flowers.trim.contigs.good.unique.precluster.pick.rdp.wang.pick.tx.list, count=Flowers.trim.contigs.good.unique.good.filter.unique.precluster.denovo.uchime.pick.pick.count_table)
+##Flowers.trim.contigs.good.unique.good.filter.unique.precluster.pick.rdp.wang.pick.tx.shared
+
+classify.otu(list=Flowers.trim.contigs.good.unique.precluster.pick.rdp.wang.pick.tx.list , count=Flowers.trim.contigs.good.unique.good.filter.unique.precluster.denovo.uchime.pick.pick.count_table, taxonomy=Flowers.trim.contigs.good.unique.good.filter.unique.precluster.pick.rdp.wang.pick.taxonomy, label=1)
+##Flowers.trim.contigs.good.unique.good.filter.unique.precluster.pick.rdp.want.pick.tx.1.cons.taxonomy
+##Flowers.trim.contigs.good.unique.good.filter.unique.precluster.pick.rdp.want.pick.tx.1.cons.tax.summary
+
+dist.seqs(fasta=Flowers.trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.fasta, output=lt, processors=10)
+##Flowers.trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.phylip.dist
+
+clearcut(phylip= Flowers.trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.phylip.dist)
+##Flowers.trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.phylip.tre
+
+system(mv Flowers.trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.an.unique_list.shared Flowers2.an.shared)
+system(mv Flowers.trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.an.unique_list.0.03.cons.taxonomy Flowers2.an.cons.taxonomy)
+
+count.groups(shared=Flowers2.an.shared)
+##Flowers2.an.count.summary
+
+sub.sample(shared=Flowers2.an.shared, size=3000)
+##Flowers2.an.0.03.subsample.shared
+
+##alpha diversity measurments
+
+rarefaction.single(shared=Flowers2.an.shared, calc=sobs, freq=100)
+##Flowers2.an.groups.rarefaction
+
+summary.single(shared=Flowers2.an.shared, calc=nseqs-coverage-sobs-invsimpson, subsample=3000)
+##Flowers2.an.groups.ave-std.summary
+##Flowers2.an.groups.summary
+
+##beta diversity measurments
+
+dist.shared(shared=Flowers2.an.shared, calc=thetayc-jclass, subsample=3000)
+##Flowers2.an.thetayc.0.03.lt.dist
+##Flowers2.an.jclass.0.03.lt.distq
+##Flowers2.an.thetayc.0.03.lt.ave.dist
+##Flowers2.an.thetayc.0.03.lt.std.dist
+##Flowers2.an.jclass.0.03.lt.ave.dist
+##Flowers2.an.jclass.0.03.lt.std.dist
+
+pcoa(phylip=Flowers2.an.thetayc.0.03.lt.ave.dist)
+##Flowers2.an.thetayc.0.03.lt.ave.pcoa.axes
+##Flowers2.an.thetayc.0.03.lt.ave.pcoa.loadings
+
+nmds(Flowers2=.an.thetayc.0.03.lt.ave.dist)
+##Flowers2.an.thetayc.0.03.lt.ave.nmds.iters
+##Flowers2.an.thetayc.0.03.lt.ave.nmds.stress
+##Flowers2.an.thetayc.0.03.lt.ave.nmds.axes
+
+amova(phylip=Flowers2.an.thetayc.0.03.lt.ave.dist, design=Evans2.design)
+homova(phylip=Flowers2.an.thetayc.0.03.lt.ave.dist, design=Evans2.design)
+corr.axes(axes=Flowers2.an.thetayc.0.03.lt.ave.pcoa.axes, shared=Flowers2.an.0.03.subsample.shared, method=spearman, numaxes=3)
+metastats(shared=Flowers2.an.0.03.subsample.shared, design=Evans2.design)
+lefse(shared=Flowers2.an.0.03.subsample.shared, design=Evans2.design)
+classify.rf(shared=Flowers2.an.0.03.subsample.shared, design=Evans2.design)
