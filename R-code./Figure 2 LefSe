@@ -1,0 +1,278 @@
+## Making a double dotplot of LefSe-identified OTUs
+# 9.24.2016
+
+# adapted from the repository of Anna Seekatz
+
+library(plyr)
+library(reshape2)
+library(Hmisc)
+library("data.table", lib.loc="~/R/R-3.2.5/library")
+library(lattice)
+library(dplyr)
+
+# files used:
+# Flowers_metadata
+# Flowers2_relOTUs.txt
+# Flowers_stability.trim.contigs.good.unique.good.good.unique.precluster.pick.pds.wang.pick.tx.1.cons.taxonomy
+# flowers2.new.taxonomy.names.txt
+# stability2.an.shared.txt
+# Flowers2_relOTUs.txt
+
+# add column metadata (taxonomy info):
+taxonomy_file<-read.table(file="Flowers_stability.trim.contigs.good.unique.good.good.unique.precluster.pick.pds.wang.pick.tx.1.cons.taxonomy", header=TRUE)
+tax <- taxonomy_file$Taxonomy
+tax <- gsub("\\(\\d*\\)", "", tax) ##gets rid on ##s
+tax <- gsub(";unclassified", "", tax) ##eliminates the unclassified at the ends
+tax <- gsub("_1", "", tax)
+tax <- gsub(";$", "", tax) #eliminates the last ;
+tax <- gsub("/.*", "", tax)
+tax <- gsub(".*;", "", tax) #eliminates any entry with a ";" after it- leaves the last classification
+tax.names <-paste(taxonomy_file$OTU, tax)
+tax.names <-gsub("000", "", tax.names)
+taxonomy_file$taxname<-tax.names
+phylum <- taxonomy_file$Taxonomy
+phylum <- gsub("\\(\\d*\\)", "", phylum)
+phylum <- gsub("Bacteria;", "", phylum)
+phylum <- gsub(";$", "", phylum)
+phylum <- gsub(";.*", "", phylum)
+taxonomy_file$phylum<-phylum
+tax<-taxonomy_file
+tax<-tax[order(tax$OTU),]
+write.table(tax, file="flowers2.new.taxonomy.names.txt", sep="\t", quote=FALSE, col.names=TRUE, row.names = FALSE)
+
+# meta and OTU files
+meta<-read.table(file="Flowers_metadata", header=TRUE)
+
+
+##making Flowers2_relOTUs.txt
+
+shared<-read.table(file="stability2.an.shared.txt", header=TRUE, row.names=1)
+#shared<-read.table(file="stability4.an.shared.txt", header=TRUE)
+
+#otu<-subset(shared, select =-c(Group, numOtus) )                                                                                                                       #gets rid of extra columns in R
+#otu.filtered<-otu[,which(colSums(otu)>=100)]                                                                                                                                               #eliminates any OTUs present at less than a count of 100
+otu.filtered<-shared[,which(colSums(otu)>=100)]                                           
+otu.filtered<- otu.filtered[ order(row.names(otu.filtered)), ]                                                                     #order by the rownames (your samples)
+otu.matrix<-as.matrix(otu.filtered)
+
+# get relative abundance of file instead of raw counts:
+otu.rel<-otu.matrix/rowSums(otu.matrix)
+otu.rel<-(otu.matrix/rowSums(otu.matrix))*100
+write.table(otu.rel, file="Flowers2_relOTUs.txt", sep="\t", quote=FALSE, col.names=NA)
+
+#################################################################################################
+
+sub.otus<-read.table(file="Flowers2_relOTUs.txt", header=TRUE)
+sub.otus[1:5,1:5]
+
+tax<-read.table(file="flowers2.new.taxonomy.names.txt", header=TRUE, sep="\t")
+
+tax[1:5,1:5]
+keep<-as.character(colnames(sub.otus[1:512])) ##now that its a character
+
+
+filtered.tax<-tax[tax$OTU %in% keep, ]
+dim(filtered.tax)
+
+colnames(sub.otus)<-filtered.tax$taxname
+sub.otus$sampleID<-rownames(sub.otus)
+colnames(sub.otus)
+# merge meta and OTUs:
+
+sub.otus$sampleID<-as.factor(sub.otus$sampleID)
+sub.all<-merge(meta, sub.otus, by.x="sampleID", by.y="sampleID")
+dim(sub.all)
+sub.all <- sub.all[,1:233]
+columns <- colnames(sub.all)
+columns <- gsub("u00", "u", columns)
+columns <- gsub("u0", "u", columns)
+columns <- gsub(" ", "_", columns)
+colnames(sub.all)<- columns
+write.table(sub.all, "sub_all.txt", sep="\t", quote=T, col.names = T, row.names = F) 
+sub.all<-read.table(file="sub_all.txt", header=TRUE)
+
+rownames(sub.all)<-sub.all$sampleID ##making the first column the row names
+
+# lefse results (filtered file to include only the significant ones)
+lefse<-read.table(file="lefse_significant.txt", header=TRUE)
+otu<-lefse$OTU
+otu<- gsub("u00","u", otu)
+lefse$OTU<-otu 
+
+# get taxnames for lefse OTU file:
+keep<-as.character(lefse$OTU)
+filtered.tax<-tax[tax$OTU %in% keep, ]
+lefse$OTU<-filtered.tax$taxname
+
+###there are some extra zeros in the OTUs of the taxname columns-> but defined as OTUs
+
+otu2 <- lefse$OTU
+otu2 <- gsub("u00", "u", otu2)
+otu2 <- gsub("u0", "u", otu2)
+otu2 <- gsub(" ", "_", otu2)
+lefse$OTU <-otu2
+lefse <- lefse[order(lefse$pValue),]
+lefse<-lefse[1:6,]
+lefse <- lefse[order(lefse$Class, lefse$pValue),]
+lefse[8,1]
+lefsetop40<-lefse[c(1,2,8),]
+
+
+lefsetop40<-as.character(lefsetop40$OTU[1:3])
+lefsetop40[3,1]<-"Otu01_Lachnospiraceae"
+
+#### Fig. 2: plotting lefse OTUs by medication group
+
+otus.df<-sub.all[, which(colnames(sub.all) %in% lefsetop40$OTU)]
+
+otus.df$sampleID<-rownames(otus.df) ##makes the sampleID the row names
+
+groups<-sub.all [ , c("sampleID", "AAP_NOAAP")] ##takes out just these columns in order to merge with the otus.df
+otus<-merge(groups, otus.df, by.x="sampleID", by.y="sampleID")
+otus
+otus[18,2]<-"yes" ##specific agent unknown but we know they are on an atypical
+#otus<-otus[,2:7]
+# now you have your list of significant otus in a dataframe!
+
+#### Fig. 2: plotting lefse OTUs by medication status (AAP vs No AAP)
+# these are the OTUs significant between medication groups and in the top 50 OTUs 
+
+otus.clinical<-otus[,c(1,2,4,5)]
+
+# create your stats summary dataframe:
+#For lower plot
+
+x<-otus.clinical
+means<-aggregate(cbind(Otu25_Akkermansia, Otu32_Sutterella) ~ AAP_NOAAP, data = x,FUN=function(x) mean =mean(x))
+means2<-melt(means, id.vars = "AAP_NOAAP", measure.vars = c("Otu25_Akkermansia", "Otu32_Sutterella"))
+otu.means<-means2$value
+
+sds<-aggregate(cbind(Otu25_Akkermansia, Otu32_Sutterella) ~ AAP_NOAAP,data = x,FUN=function(x) sd =sd(x) )
+sds2<-melt(sds, id.vars = "AAP_NOAAP", measure.vars = c("Otu25_Akkermansia", "Otu32_Sutterella"))
+otu.sds<-sds2$value
+otu.highsd<-otu.means+sds2$value
+otu.lowsd<-otu.means-sds2$value
+
+medians<-aggregate(cbind(Otu25_Akkermansia, Otu32_Sutterella) ~ AAP_NOAAP,data = x,FUN=function(x) median =median(x))
+medians2<-melt(medians, id.vars = "AAP_NOAAP", measure.vars = c("Otu25_Akkermansia", "Otu32_Sutterella"))
+otu.medians<-medians2$value
+
+ses<-aggregate(cbind(Otu25_Akkermansia, Otu32_Sutterella) ~ AAP_NOAAP,data = x,FUN=function(x) se=sd(x)/sqrt(length(x)) )
+ses2<-melt(ses, id.vars = "AAP_NOAAP", measure.vars = c("Otu25_Akkermansia", "Otu32_Sutterella"))
+otu.ses<-ses2$value
+otu.highse<-otu.means+ses2$value
+otu.lowse<-otu.means-ses2$value
+
+highq<-aggregate(cbind(Otu25_Akkermansia, Otu32_Sutterella) ~ AAP_NOAAP,data = x,FUN=function(x) highq=quantile(x, 0.75) )
+highq2<-melt(ses, id.vars = "AAP_NOAAP", measure.vars = c("Otu25_Akkermansia", "Otu32_Sutterella"))
+otu.highq<-otu.medians+highq2$value
+
+lowq<-aggregate(cbind(Otu25_Akkermansia, Otu32_Sutterella) ~ AAP_NOAAP,data = x,FUN=function(x) lowq=quantile(x, 0.75) )
+lowq2<-melt(ses, id.vars = "AAP_NOAAP", measure.vars = c("Otu25_Akkermansia", "Otu32_Sutterella"))
+otu.lowq<-otu.medians-lowq2$value
+
+
+# add all the data together:
+labels<-paste(as.character(means2$AAP_NOAAP), as.character(means2$variable))
+summary<-data.frame(label=labels, 
+                    mean = otu.means, 
+                    sd = otu.sds, 
+                    se = otu.ses, 
+                    median = otu.medians, 
+                    highq = otu.highq,
+                    lowq = otu.lowq,
+                    highse = otu.highse,
+                    lowse = otu.lowse,
+                    highsd = otu.highsd,
+                    lowsd = otu.lowsd
+)
+summary$sequence <- seq(1, length(summary$label))
+summary$label <- reorder(summary$label, summary$sequence)
+summary$otu <- means2$variable
+summary$group <-means2$AAP_NOAAP
+
+###For the upper plot
+otus2.clinical<-otus[,c(1:3)]
+
+y<-otus2.clinical
+means_y<-aggregate(cbind(Otu01_Lachnospiraceae) ~ AAP_NOAAP, data = y,FUN=function(y) mean =mean(y))
+means2_y<-melt(means_y, id.vars = "AAP_NOAAP", measure.vars = c("Otu01_Lachnospiraceae"))
+otu.means_y<-means2_y$value
+  
+sds_y<-aggregate(cbind(Otu01_Lachnospiraceae) ~ AAP_NOAAP,data = y,FUN=function(y) sd =sd(y) )
+sds2_y<-melt(sds_y, id.vars = "AAP_NOAAP", measure.vars = c("Otu01_Lachnospiraceae"))
+otu.sds_y<-sds2_y$value
+otu.highsd_y<-otu.means_y+sds2_y$value
+otu.lowsd_y<-otu.means_y-sds2_y$value
+
+medians_y<-aggregate(cbind(Otu01_Lachnospiraceae) ~ AAP_NOAAP,data = y,FUN=function(y) median =median(y))
+medians2_y<-melt(medians_y, id.vars = "AAP_NOAAP", measure.vars = c("Otu01_Lachnospiraceae"))
+otu.medians_y<-medians2_y$value
+
+ses_y<-aggregate(cbind(Otu01_Lachnospiraceae) ~ AAP_NOAAP,data = y,FUN=function(y) se=sd(y)/sqrt(length(y)) )
+ses2_y<-melt(ses_y, id.vars = "AAP_NOAAP", measure.vars = "Otu01_Lachnospiraceae")
+otu.ses_y<-ses2_y$value
+otu.highse_y<-otu.means_y+ses2_y$value
+otu.lowse_y<-otu.means_y-ses2_y$value
+
+highq_y<-aggregate(cbind(Otu01_Lachnospiraceae) ~ AAP_NOAAP,data = y,FUN=function(y) highq=quantile(y, 0.75) )
+highq2_y<-melt(ses_y, id.vars = "AAP_NOAAP", measure.vars = c("Otu01_Lachnospiraceae"))
+otu.highq_y<-otu.medians_y+highq2_y$value
+
+lowq_y<-aggregate(cbind(Otu01_Lachnospiraceae) ~ AAP_NOAAP,data = y,FUN=function(y) lowq=quantile(y, 0.75) )
+lowq2_y<-melt(ses_y, id.vars = "AAP_NOAAP", measure.vars = c("Otu01_Lachnospiraceae"))
+otu.lowq_y<-otu.medians_y-lowq2_y$value
+
+
+labels2<-paste(as.character(means2_y$AAP_NOAAP), as.character(means2_y$variable))
+summary2<-data.frame(label2=labels2, 
+                    mean_y = otu.means_y, 
+                    sd_y = otu.sds_y, 
+                    se_y = otu.ses_y, 
+                    median_y = otu.medians_y, 
+                    highq_y = otu.highq_y,
+                    lowq_y = otu.lowq_y,
+                    highse_y = otu.highse_y,
+                    lowse_y = otu.lowse_y,
+                    highsd_y = otu.highsd_y,
+                    lowsd_y = otu.lowsd_y
+)
+summary2$sequence <- seq(1, length(summary2$label))
+summary2$label <- reorder(summary2$label, summary2$sequence)
+summary2$otu <- means2_y$variable
+summary2$group <-means2_y$AAP_NOAAP
+
+
+labels2 <- summary2$otu
+labels2 <- gsub("_", ": ", labels2)
+labels2 <- gsub("000", "", labels2)
+summary2$otu<-gsub("_", ": ", summary2$otu)
+summary2$otu<-gsub("000", "", summary2$otu)
+averages2 <- summary2$mean_y
+ranges2 <- summary2$se_y
+groupnames2<-as.character(unique(summary2$group_y))
+
+####Plot it
+
+par(mfrow=c(2,1), mar=c(2, 3, 3, 2.1))
+
+dotchart(averages2,groups=as.factor(summary2$otu),pch=21, bg=c("gold4", "darkslategray"),col="black",
+        cex.axis=0.8,cex.lab=0.8,
+         xlim = c(min(averages2-ranges2)-1, max(averages2+ranges2)+1))
+segments(averages2-ranges2, 
+         c(1:2), 
+         averages2+ranges2, 
+         c(1:2), 
+         col=c("gold4", "darkslategray"), lwd=2)
+
+
+dotchart(averages, labels="", xlab='relative abundance (mean + se)',  pch=21, bg=c("gold4", "darkslategray"), col="black",
+         groups=as.factor(summary$otu), cex=1,cex.axis=0.8, cex.lab=0.8,
+         xlim = c(min(averages-ranges)-0.1, max(averages+ranges)+0.2))
+segments(averages-ranges, 
+         c(5:6, 1:2  ), 
+         averages+ranges, c(5:6, 1:2 ), 
+         col=c("gold4", "darkslategray"), lwd=2)
+
+legend(x=1,y=11.8, legend=c("No AAP", "AAP"),pch=21,pt.bg=c("gold4","darkslategray"), col="black",pt.cex=1.2,cex=0.9, xpd=NA, bty="n")
+
