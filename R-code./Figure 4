@@ -1,0 +1,52 @@
+##Files needed Flowers_Meta.txt
+
+library(shape)
+library(plyr)
+library(reshape2)
+library(gplots)
+x <- read.table(file="Flowers_Meta.txt", header = T)
+head(x)
+sapply(x, class)
+sapply(x, mode)
+
+x$sampleID<-as.character(x$sampleID)
+x$AAP.Risk<-as.character(x$AAP.Risk)
+x$AAP_NOAAP<-as.character(x$AAP_NOAAP)
+x$Female<-as.character(x$Female)
+
+xMale<-subset(x, Female=="M")
+xFemale <-subset(x, Female=="F")
+
+
+par (mfrow=c(1,3), xpd=NA)
+
+boxplot(invsimpson ~ AAP_NOAAP, data=x,  xlab= "All Data", ylim=c(0,50),ylab = "Inverse Simpson Diversity Index")
+stripchart(invsimpson ~ AAP_NOAAP, data = x, 
+           vertical = TRUE, method = "jitter", 
+           pch = 21,  bg= "darkslategray", col = "black", cex=1.8,
+           add = TRUE)
+text(1.5,50, "Wilcoxon Test\np=0.045")
+text(0.7,1,"A", cex=2.5)
+#wilcox.test(invsimpson ~ AAP_NOAAP, data=x)
+#p=0.045
+
+boxplot(invsimpson ~ AAP_NOAAP, data=xFemale, xlab= "Females", ylim=c(0,50))
+stripchart(invsimpson ~ AAP_NOAAP, data = xFemale, 
+           vertical = TRUE, method = "jitter", 
+           pch = 21,  bg= "goldenrod4", col = "black", cex=1.8,
+           add = TRUE)
+text(1.5,50, "Wilcoxon Test\np=0.015")
+text(0.7,1,"B", cex=2.5)
+#wilcox.test(invsimpson ~ AAP_NOAAP, data=xFemale)
+#p=0.015
+
+boxplot(invsimpson ~ AAP_NOAAP, data=xMale, xlab= "Males", ylim=c(0,50))
+stripchart(invsimpson ~ AAP_NOAAP, data = xMale, 
+           vertical = TRUE, method = "jitter", 
+           pch = 21,  bg= "darkred", col = "black", cex=1.8,
+           add = TRUE)
+text(1.5,50, "Wilcoxon Test\np=0.8")
+text(0.7,1,"C", cex=2.5)
+
+#wilcox.test(invsimpson ~ AAP_NOAAP, data=xMale)
+#p-value = 0.8032
