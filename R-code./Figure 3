@@ -1,0 +1,129 @@
+Files needed: sub_all.txt
+library(shape)
+library(plyr)
+library(reshape2)
+library(gplots)
+x <- read.table(file="sub_all.txt", header = T)
+head(x)
+sapply(x, class)
+sapply(x, mode)
+
+x$sampleID<-as.character(x$sampleID)
+x$AAP.Risk<-as.character(x$AAP.Risk)
+x$AAP_NOAAP<-as.character(x$AAP_NOAAP)
+x$Female<-as.character(x$Female)
+
+x$AAP_NOAAP[x$AAP_NOAAP=="yes"]<-"AAP"
+x$AAP_NOAAP[x$AAP_NOAAP=="no"]<-"No AAP"
+
+x$BMI_cat[x$BMI<30]<-"not obese"
+x$BMI_cat[x$BMI>=30]<-"obese"
+
+
+
+####summarizing statsitics in the dataset
+totaldata<- summarise(x, mean(Otu1_Lachnospiraceae), sd(Otu1_Lachnospiraceae), mean(Otu25_Akkermansia), sd( Otu25_Akkermansia))
+
+#mean(Otu1_Lachnospiraceae) sd(Otu1_Lachnospiraceae) mean(Otu25_Akkermansia) sd(Otu25_Akkermansia)
+#1                    11.2093                 9.150407               0.7982792              1.201769
+
+##Limiting data to 3 SD (eliminating outliers) OTU1-38, OTU25-4.39
+x.sub <- subset(x, Otu1_Lachnospiraceae <= 38 & Otu25_Akkermansia <= 4.39)
+obese<-subset(x.sub, BMI_cat=="obese")
+nonobese <-subset(x.sub, BMI_cat=="not obese")
+
+pardefault<-par()
+
+#######graphing data ########################################
+
+par (mfrow=c(2,4), xpd=NA,  mar= c(5.1, 1.9, 4.1, 1.9))
+
+
+boxplot(Otu1_Lachnospiraceae ~ AAP_NOAAP, data=x.sub,  xlab= "All Data", ylim=c(0,40),ylab = "Relative Abundance")
+stripchart(Otu1_Lachnospiraceae ~ AAP_NOAAP, data = x.sub, 
+           vertical = TRUE, method = "jitter", 
+           pch = 21,  bg= "hotpink4", col = "black", cex=1.8,
+           add = TRUE)
+text(1.5,40, "Wilcoxon Test\np=0.037")
+text(0.65,37,"A", cex=1.7)
+#wilcox.test(Otu1_Lachnospiraceae ~ AAP_NOAAP, data=x.sub)
+#p=0.037
+
+boxplot(Otu1_Lachnospiraceae ~ BMI_cat, data=x.sub, xlab= "All Data", ylim=c(0,40))
+stripchart(Otu1_Lachnospiraceae ~ BMI_cat, data = x.sub, 
+           vertical = TRUE, method = "jitter", 
+           pch = 21,  bg= "hotpink4", col = "black", cex=1.8,
+           add = TRUE)
+text(1.5,40, "Wilcoxon Test\np=0.006")
+text(0.65,37,"B", cex=1.7)
+#wilcox.test(Otu1_Lachnospiraceae ~ BMI_cat, data=x.sub)
+#p=0.006
+
+boxplot(Otu1_Lachnospiraceae ~ AAP_NOAAP, data=obese, xlab= "Obese",  ylim=c(0,40))
+stripchart(Otu1_Lachnospiraceae ~ AAP_NOAAP, data = obese, 
+           vertical = TRUE, method = "jitter", 
+           pch = 21,  bg= "hotpink4", col = "black", cex=1.8,
+           add = TRUE)
+text(1.5,40, "Wilcoxon Test\np=0.65")
+text(0.65,37,"C", cex=1.7)
+
+#wilcox.test(Otu1_Lachnospiraceae ~ AAP_NOAAP, data=obese)
+#p=0.65
+
+boxplot(Otu1_Lachnospiraceae ~ AAP_NOAAP, data=nonobese, xlab= "Not obese", ylim=c(0,40))
+stripchart(Otu1_Lachnospiraceae ~ AAP_NOAAP, data = nonobese, 
+           vertical = TRUE, method = "jitter", 
+           pch = 21,  bg= "hotpink4", col = "black", cex=1.8,
+           add = TRUE)
+text(1.5,40, "Wilcoxon Test\np=0.13")
+text(0.65,37,"D", cex=1.7)
+
+#wilcox.test(Otu1_Lachnospiraceae ~ AAP_NOAAP, data=nonobese)
+#p=0.13
+
+
+
+boxplot(Otu25_Akkermansia ~ AAP_NOAAP, data=x.sub,  xlab= "All Data",ylim= c(0,4.5) ,ylab = "Relative Abundance")
+stripchart(Otu25_Akkermansia ~ AAP_NOAAP, data = x.sub, 
+           vertical = TRUE, method = "jitter", 
+           pch = 21,  bg= "palegreen3", col = "black", cex=1.8,
+           add = TRUE)
+text(1.5,4.5, "Wilcoxon Test\np=0.006")
+text(0.65,4,"A", cex=1.7)
+#wilcox.test(Otu25_Akkermansia ~ AAP_NOAAP, data=x.sub)
+#p=0.0006
+
+boxplot(Otu25_Akkermansia ~ BMI_cat, data=x.sub, ylim= c(0,4.5), xlab= "All Data")
+stripchart(Otu25_Akkermansia ~ BMI_cat, data = x.sub, 
+           vertical = TRUE, method = "jitter", 
+           pch = 21,  bg= "palegreen3", col = "black", cex=1.8,
+           add = TRUE)
+text(1.5,4.5, "Wilcoxon Test\np=0.045")
+text(0.65,4,"B", cex=1.7)
+#wilcox.test(Otu25_Akkermansia ~ BMI_cat, data=x.sub)
+#p=0.045
+
+boxplot(Otu25_Akkermansia ~ AAP_NOAAP, data=obese, ylim= c(0,4.5), xlab= "Obese")
+stripchart(Otu25_Akkermansia ~ AAP_NOAAP, data = obese, 
+           vertical = TRUE, method = "jitter", 
+           pch = 21,  bg= "palegreen3", col = "black", cex=1.8,
+           add = TRUE)
+text(1.5,4.5, "Wilcoxon Test\np=0.3")
+text(0.65,4,"C", cex=1.7)
+
+#wilcox.test(Otu25_Akkermansia ~ AAP_NOAAP, data=obese)
+#p=0.3
+
+boxplot(Otu25_Akkermansia ~ AAP_NOAAP, data=nonobese,ylim= c(0,4.5), xlab= "Not Obese")
+stripchart(Otu25_Akkermansia ~ AAP_NOAAP, data = nonobese, 
+           vertical = TRUE, method = "jitter", 
+           pch = 21,  bg= "palegreen3", col = "black", cex=1.8,
+           add = TRUE)
+text(1.5, 4.5, "Wilcoxon Test\np=0.005")
+text(0.65,4,"D", cex=1.7)
+
+#wilcox.test(Otu25_Akkermansia ~ AAP_NOAAP, data=nonobese)
+#p=0.004
+mtext('Otu1 Lachnospiraceae', side=3, line=-3, outer=TRUE) 
+mtext('Otu25 Akkermansia', side=3, line=-36.5, outer=TRUE)
+
